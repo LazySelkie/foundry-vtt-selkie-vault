@@ -1,0 +1,130 @@
+let actorSkills = actor.system.skills;
+let stats = Object.keys(actorSkills);
+
+let statNum = 0;
+
+let stName = "";
+
+let statsOptions = stats.reduce(function (acc, cur, index) {
+	const stName = game.i18n.localize(`WITCHER.St${cur.charAt(0).toUpperCase() + cur.slice(1)}`);
+	acc += `<option value="${index}">${stName}</option>`;
+	return acc;
+}, "");
+let contentStat =  `<form>
+                     <div class="form-group">
+				        <label for="statSelect">Выбор характеристики</label>
+				        <select name="statSelect">
+				          ${statsOptions}
+				        </select>
+				      </div>
+                </form>`
+
+let statDialog = new Dialog({
+	title: "Выберите характеристику, проверку навыка которой запросить",
+	content: contentStat,
+	buttons: {
+      request: {
+        label: "Выбрать характеристику",
+        callback: (html) => {
+			statNum = html.find('[name="statSelect"]').val();
+			stName = stats[statNum];
+			let skills = Object.keys(actorSkills[stName]);
+			const skillNames = [];
+            let skillsOptions = skills.reduce(function (acc, cur, index) {
+				let skName = `WITCHER.Sk${stName.charAt(0).toUpperCase() + stName.slice(1)}${cur.charAt(0).toUpperCase() + cur.slice(1)}`;
+				// Обработка строк которые не совпадают с общим паттерном
+				switch (skName) {
+					case "WITCHER.SkIntCommonsp":
+						skName = "WITCHER.SkIntCommon"; break;
+					case "WITCHER.SkIntEldersp":
+						skName = "WITCHER.SkIntElder"; break;
+					case "WITCHER.SkIntSocialetq":
+						skName = "WITCHER.SkIntSocialEt"; break;
+					case "WITCHER.SkIntStreetwise":
+						skName = "WITCHER.SkIntStreet"; break;
+					case "WITCHER.SkRefSmallblades":
+						skName = "WITCHER.SkRefSmall"; break;
+					case "WITCHER.SkRefStaffspear":
+						skName = "WITCHER.SkRefStaff"; break;
+					case "WITCHER.SkBodyPhysique":
+						skName = "WITCHER.SkBodyPhys"; break;
+					case "WITCHER.SkBodyEndurance":
+						skName = "WITCHER.SkBodyEnd"; break;
+					case "WITCHER.SkEmpFinearts":
+						skName = "WITCHER.SkEmpArts"; break;
+					case "WITCHER.SkEmpPerception":
+						skName = "WITCHER.SkEmpHumanPerc"; break;
+					case "WITCHER.SkCraFirstaid":
+						skName = "WITCHER.SkCraAid"; break;
+					case "WITCHER.SkCraForgery":
+						skName = "WITCHER.SkCraForge"; break;
+					case "WITCHER.SkCraPicklock":
+						skName = "WITCHER.SkCraPick"; break;
+					case "WITCHER.SkCraTrapcraft":
+						skName = "WITCHER.SkCraTrapCraft"; break;
+					case "WITCHER.SkWillHexweave":
+						skName = "WITCHER.SkWillHex"; break;
+					case "WITCHER.SkWillIntimidation":
+						skName = "WITCHER.SkWillIntim"; break;
+					case "WITCHER.SkWillResistmagic":
+						skName = "WITCHER.SkWillResistMag"; break;
+					case "WITCHER.SkWillResistcoerc":
+						skName = "WITCHER.SkWillResistCoer"; break;
+					case "WITCHER.SkWillRitcraft":
+						skName = "WITCHER.SkWillRitCraft"; break;
+				}
+				skName = game.i18n.localize(skName);
+				acc += `<option value="${index}">${skName}</option>`;
+				skillNames.push(skName);
+				return acc;
+			}, "");
+			let contentSkill = `<form>
+                     <div class="form-group">
+				        <label for="skillSelect">Выбор характеристики</label>
+				        <select name="skillSelect">
+				          ${skillsOptions}
+				        </select>
+				      </div>
+                </form>`
+            
+            let skillDialog = new Dialog({
+				title: "Выберите, проверку какого навыка запросить",
+				content: contentSkill,
+				buttons: {
+				    request: {
+					    label: "Выбрать навык", callback: async (html) => {
+					    let skillNum = html.find('[name="skillSelect"]').val();
+					    const skillName = skillNames[Number(skillNum)];
+					    
+					    await Requestor.request({
+						  img: false,
+						  description: `Проверка навыка ${skillName}`,
+						  buttonData: [{
+						    label: "Сделать бросок",
+						    action: () => {
+							    actor.sheet._onSkillRoll(this.statNum, this.skillNum);
+						    },
+						    scope: {statNum: Number(statNum), skillNum: Number(skillNum), skillName: skillName}
+						  }],
+						});
+				    }
+				    },
+				    cancel: { label: "Отмена", callback: () => skillNum = -1 }
+				},
+				default: "cancel",
+				close: html => {
+					(async () => {
+					})();
+				}
+			}).render(true);
+            
+		}
+		},
+        cancel: { label: "Отмена", callback: () => statNum = -1 }
+    },
+    default: "cancel",
+    close: html => {
+	    (async () => {
+	    })();
+    }
+}).render(true);
