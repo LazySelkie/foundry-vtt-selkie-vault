@@ -1,0 +1,33 @@
+let actorData = actor || canvas.tokens.controlled[0] || game.user.character;
+
+if (actorData == null) {
+    ui.notifications.warn(`Должен быть выделен токен`);
+    return;
+}
+
+// Выдать окно с выбором сколько отхилить
+let content =  `<form>
+                    <div class="form-group">
+                        <label for="num">Хочу отхилить:</label>
+                        <input id="num" name="num" type="number" min="0"></input>
+                        </div>
+                </form>`
+
+new Dialog({
+	title: `Восстановление хп`,
+	content: content,
+	buttons: {
+        heal: { label: "Лечить", callback: (html) => {
+			const number = Math.floor(Number(html.find('#num')[0].value));
+			// Выше максимального хп не лечим
+			const newHP = Math.min(actorData.system.derivedStats.hp.value + number, actorData.system.derivedStats.hp.max);
+			actorData.update({ "system.derivedStats.hp.value" : newHP })
+		} },
+        cancel: { label: "Отмена", callback: () => { return; } }
+    },
+    default: "cancel",
+    close: html => {
+	    (async () => {
+	    })();
+    }
+}).render(true);
