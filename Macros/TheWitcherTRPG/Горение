@@ -1,0 +1,89 @@
+// Предполагает попытку нанесения 5 урона каждой части тела (т.е.30 урона при полном отсутствии брони)
+// ! Минусы макроса: Не учитывает Природную броню, работает на персонажах игроков (на монстре скорее всего нет)
+
+function getPartSP(armor1 = 0, armor2 = 0, armor3 = 0) {
+	// Расположить по возрастанию (1-2-3)
+	if (armor1 > armor2) {
+		[armor1, armor2] = [armor2, armor1];
+	};
+	if (armor2 > armor3) {
+		[armor3, armor2] = [armor2, armor3];
+	};
+	if (armor1 > armor2) {
+		[armor1, armor2] = [armor2, armor1];
+	};
+	// Теперь считаем
+	let effectiveSP = armor1;
+	let diff = armor2 - effectiveSP;
+	if (diff >= 15 && diff <= 20) {
+	    effectiveSP += 2;
+	} else if (diff >= 9) {
+	    effectiveSP += 3;
+	} else if (diff >= 5) {
+	    effectiveSP += 4;
+	} else if (diff >= 0 && armor2 != 0) {
+	    effectiveSP += 5;
+	}
+	if (armor3 == 0) { return effectiveSP; }
+	diff = armor3 - effectiveSP;
+	if (diff >= 15 && diff <= 20) {
+	    effectiveSP += 2;
+	} else if (diff >= 9) {
+	    effectiveSP += 3;
+	} else if (diff >= 5) {
+	    effectiveSP += 4;
+	} else if (diff >= 0 && armor3 != 0) {
+	    effectiveSP += 5;
+	}
+	return effectiveSP;
+}
+
+// Получить список надетых предметов (вообще всех)
+const equipedItems = actor.items.filter(item => item.system.equiped);
+// Посчитать защиту каждой части тела (будет нужно для подсчета урона)
+let headArmors = equipedItems.filter(h => h.system.location == "Head" || h.system.location == "FullCover");
+let torsoArmors = equipedItems.filter(t => t.system.location == "Torso" || t.system.location == "FullCover");
+let legArmors = equipedItems.filter(l => l.system.location == "Leg" || l.system.location == "FullCover");
+
+let heads = headArmors;
+let torsos = torsoArmors.filter(t => t.system.torsoStopping > 0);
+let leftArms = torsoArmors.filter(t => t.system.leftArmStopping > 0);
+let rightArms = torsoArmors.filter(t => t.system.rightArmStopping > 0);
+let leftLegs = torsoArmors.filter(t => t.system.leftLegStopping > 0);
+let rightLegs = torsoArmors.filter(t => t.system.rightLegStopping > 0);
+
+let headSP = getPartSP(heads[0]?.system.headStopping, heads[1]?.system.headStopping, heads[2]?.system.headStopping);
+let torsoSP = getPartSP(torsos[0]?.system.torsoStopping, torsos[1]?.system.torsoStopping, torsos[2]?.system.torsoStopping);
+let lArmSP = getPartSP(leftArms[0]?.system.leftArmStopping, leftArms[1]?.system.leftArmStopping, leftArms[2]?.system.leftArmStopping);
+let rArmSP = getPartSP(rightArms[0]?.system.rightArmStopping, rightArms[1]?.system.rightArmStopping, rightArms[2]?.system.rightArmStopping);
+let lLegSP = getPartSP(leftLegs[0]?.system.leftLegStopping, leftLegs[1]?.system.leftLegStopping, leftLegs[2]?.system.leftLegStopping);
+let rLegSP = getPartSP(rightLegs[0]?.system.rightLegStopping, rightLegs[1]?.system.rightLegStopping, rightLegs[2]?.system.rightLegStopping);
+
+const SP = [ headSP, torsoSP, lArmSP, rArmSP, lLegSP, rLegSP ];
+// Подсчитать урон
+let damage = SP.reduce(function (acc, cur) {
+	if (cur < 5) {
+		acc += 5 - cur;
+	}
+	return acc;
+}, 0);
+// Нанести урон актору (вычесть подсчитанное хп)
+actor.update({ "system.derivedStats.hp.value" : actor.system.derivedStats.hp.value - damage })
+// Снять прочность надетых предметов
+for (let i = 0; i < equipedItems.length; i++) {
+	if (equipedItems[i].type == "armor") {
+		await equipedItems[i].update({
+			"system.reliability" : equipedItems[i].system.reliability ? equipedItems[i].system.reliability - 1 : equipedItems[i].system.reliability, // Щит
+			"system.headStopping" : equipedItems[i].system.headStopping ? equipedItems[i].system.headStopping - 1 : equipedItems[i].system.headStopping,
+			"system.leftArmStopping" : equipedItems[i].system.leftArmStopping ? equipedItems[i].system.leftArmStopping - 1 : equipedItems[i].system.leftArmStopping,
+			"system.rightArmStopping" : equipedItems[i].system.rightArmStopping ? equipedItems[i].system.rightArmStopping - 1 : equipedItems[i].system.rightArmStopping,
+			"system.leftLegStopping" : equipedItems[i].system.leftLegStopping ? equipedItems[i].system.leftLegStopping - 1 : equipedItems[i].system.leftLegStopping,
+			"system.rightLegStopping" : equipedItems[i].system.rightLegStopping ? equipedItems[i].system.rightLegStopping - 1 : equipedItems[i].system.rightLegStopping,
+			"system.torsoStopping" : equipedItems[i].system.torsoStopping ? equipedItems[i].system.torsoStopping - 1 : equipedItems[i].system.torsoStopping,
+		});
+	} else if (equipedItems[i].type == "weapon") {
+		await equipedItems[i].update({
+			"system.reliable" : equipedItems[i].system.reliable ? equipedItems[i].system.reliable - 1 : equipedItems[i].system.reliable,
+		})
+	}
+}
