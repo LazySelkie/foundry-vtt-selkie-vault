@@ -1,0 +1,7 @@
+let node = document.createElement("p");
+node.classList.add("stat-display");
+node.dataset.stat = "body";
+let event = {
+  currentTarget: node
+}
+actor.sheet._onStatSaveRoll(event);
