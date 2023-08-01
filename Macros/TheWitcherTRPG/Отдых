@@ -1,0 +1,1 @@
+actor.update({ "system.derivedStats.sta.value" : actor.system.derivedStats.sta.value + actor.system.coreStats.rec.current })
