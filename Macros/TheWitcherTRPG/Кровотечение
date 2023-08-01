@@ -1,0 +1,1 @@
+actor.update({ "system.derivedStats.hp.value" : actor.system.derivedStats.hp.value - 2 })
