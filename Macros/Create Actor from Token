@@ -1,0 +1,92 @@
+// Использовать с выделенным токеном, который желаете сохранить
+// Should be used while token you want to save is selected
+
+let curFolder = {};
+let currentSelectionFolders = [...game.actors.folders.filter(el => el.depth == 1)];
+let curPath = [];
+
+// Сохраняем в полученную папку (если она не пустая) либо в корень
+// Saving to argument folder (if it's not empty) or to root
+async function saveClonedActor(folder) {
+  await token.actor.unsetFlag('ag-tokens', 'possibleImages');
+  if (Object.keys(folder).length) {
+    await Actor.create({...token.actor.toObject(), prototypeToken: token.document.toObject(), folder});
+  } else {
+    await Actor.create({...token.actor.toObject(), prototypeToken: token.document.toObject(), folder: null });
+  }
+}
+
+// Подготовить содержимое окошка
+// Prepare dialog content
+function prepareDialogContent(folders) {
+  let selectionContent = ``;
+  let path = curPath.length ? curPath.reduce(function (acc, cur) {
+    acc += `/${cur.name}`;
+    return acc;
+  }, "") : '—';
+  
+  if (folders.length) {
+    selectionContent = folders.reduce(function (acc, cur, index) {
+      acc += `<option value="${index}">${cur.name ?? cur.folder.name}</option>`
+      return acc;
+    }, "");
+    selectionContent = `<select name="folder" id="folder-select"> ${selectionContent} </select>`;
+  } else {
+    selectionContent = `<span>Подпапок нет</span>`;
+  }
+  let content = `<form>
+      <span>Текущая папка: ${path}</span>
+      <br>
+      ${selectionContent}
+    </form>
+    `;
+  return content;
+}
+
+// Кнопки
+// Buttons
+let saveToChosen = {
+  label: "Сохранить в выбранную",
+  callback: async (html) => {
+    let chosenIndex = html.find('#folder-select')[0].value;
+    await saveClonedActor(currentSelectionFolders[chosenIndex]);
+  }
+}
+
+let saveToCurrent = {
+  label: "Сохранить в текущую",
+  callback: async (html) => {
+    await saveClonedActor(curFolder);
+  }
+}
+
+let diveDown = {
+  label: "Открыть папку",
+  callback: async (html) => {
+    let chosenIndex = html.find('#folder-select')[0].value;
+    let chosenFolder = currentSelectionFolders[chosenIndex];
+
+    curPath.push(chosenFolder);
+    curFolder = chosenFolder;
+    currentSelectionFolders = curFolder.children.map(el => el.folder) || [];
+
+    content = prepareDialogContent(currentSelectionFolders);
+    folderDialog.data.content = content;
+    if (!currentSelectionFolders.length) {
+      delete folderDialog.data.buttons.diveDown;
+      delete folderDialog.data.buttons.saveToChosen;
+    }
+    folderDialog.render(true);
+  }
+}
+// Диалоговое окно
+// Dialog
+let folderDialog = new Dialog({
+  title: "Выбор папки для сохранения",
+  content: prepareDialogContent(currentSelectionFolders),
+  buttons: {
+    saveToChosen,
+    saveToCurrent,
+    diveDown,
+  }
+}).render(true);
